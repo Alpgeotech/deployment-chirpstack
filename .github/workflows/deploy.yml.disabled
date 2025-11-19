@@ -1,0 +1,53 @@
+name: Deploy Docker Compose Stack to Production
+
+env:
+  SERVICE_DIRECTORY: ~/docker/chirpstack
+
+on:
+  push:
+    branches:
+      - main
+    # Only run if the docker-compose.yml file changes
+    paths:
+      - 'compose.yml'
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-slim
+
+    steps:
+      # 1. Check out the repository code
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # 2. Setup SSH Key
+      - name: Set up SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+
+      # 3. Copy docker-compose.yml to Server
+      - name: Copy docker-compose.yml via scp
+        run: |
+          # Add the host key to known_hosts to avoid the interactive prompt
+          echo "${{ secrets.PRODUCTION_SSH_HOST_KEY }}" >> ~/.ssh/known_hosts
+          
+          # Copy the file using your new secret names
+          # TODO: finalize directory... create directory dynamically, so scp does not fail if directory does not yet exit.
+          scp compose.yml ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:${{ env.SERVICE_DIRECTORY }}/compose.yml
+
+      # 4. Deploy on Server via SSH
+      - name: Pull images and restart stack
+        run: |
+          # Connect using your new secret names
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            # Uncomment this line if your compose file is not in the home directory
+            cd ${{ env.SERVICE_DIRECTORY }}
+            
+            # Pull the latest images specified in the compose file
+            docker compose pull
+            
+            # Stop and recreate the containers in detached mode
+            docker compose up -d --remove-orphans
+          EOF

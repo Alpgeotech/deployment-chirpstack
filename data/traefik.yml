@@ -1,0 +1,39 @@
+## traefik.yaml
+
+# Writing Logs to a File, in JSON
+#log:
+#  filePath: "/logs/traefik.log"
+#  level: WARNING
+
+api:
+  dashboard: false
+  insecure: false
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: default
+  file:
+    directory: /etc/traefik/dynamic/conf
+    watch: true
+
+#Entrypoints
+#redirect http to https
+entryPoints:
+  web:
+    address: :80
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: :443
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: $LETSENCRYPT_EMAIL
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
