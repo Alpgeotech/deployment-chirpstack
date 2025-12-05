@@ -3,7 +3,7 @@
 # Writing Logs to a File, in JSON
 #log:
 #  filePath: "/logs/traefik.log"
-#  level: WARNING
+#  level: INFO
 
 api:
   dashboard: false
@@ -12,7 +12,7 @@ api:
 providers:
   docker:
     exposedByDefault: false
-    network: default
+    network: web
   file:
     directory: /etc/traefik/dynamic/conf
     watch: true
@@ -33,7 +33,7 @@ entryPoints:
 certificatesResolvers:
   myresolver:
     acme:
-      email: $LETSENCRYPT_EMAIL
+      email: ${LETSENCRYPT_EMAIL}
       storage: /letsencrypt/acme.json
       httpChallenge:
         entryPoint: web

@@ -9,7 +9,11 @@ on:
       - main
     # Only run if the docker-compose.yml file changes
     paths:
-      - 'compose.yml'
+      - 'compose.yml.template'
+      - 'configuration'
+      - 'data'
+      - 'logs'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -27,21 +31,31 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
 
-      # 3. Copy docker-compose.yml to Server
+      # 3. Add the host key to known_hosts to avoid interactive prompt
+      - name: Add host key to known_hosts
+        run: |
+          echo "${{ secrets.PRODUCTION_SSH_HOST_KEY }}" >> ~/.ssh/known_hosts
+
+      # 3. Create service directory
+      - name: Create service directory
+        run: |
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
+
+      # 4. Copy docker-compose.yml to Server
       - name: Copy docker-compose.yml via scp
         run: |
-          # Add the host key to known_hosts to avoid the interactive prompt
-          echo "${{ secrets.PRODUCTION_SSH_HOST_KEY }}" >> ~/.ssh/known_hosts
-          
-          # Copy the file using your new secret names
-          # TODO: finalize directory... create directory dynamically, so scp does not fail if directory does not yet exit.
-          scp compose.yml ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:${{ env.SERVICE_DIRECTORY }}/compose.yml
+          scp compose.yml ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/compose.yml
 
-      # 4. Deploy on Server via SSH
+      # 5. Copy the directory structure for persistent storage
+      - name: Create directories for volumes
+        run: |
+          scp -r data ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/data
+
+      # 5. Deploy on Server via SSH
       - name: Pull images and restart stack
         run: |
           # Connect using your new secret names
-          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
             # Uncomment this line if your compose file is not in the home directory
             cd ${{ env.SERVICE_DIRECTORY }}
             
@@ -51,3 +65,15 @@ jobs:
             # Stop and recreate the containers in detached mode
             docker compose up -d --remove-orphans
           EOF
+
+
+
+#   # 1. Create the real config file from the template
+# - name: Generate traefik.yml from template
+# run: |
+#   # Export the secret as an environment variable
+#   export TRAEFIK_ACME_EMAIL="${{ secrets.TRAEFIK_ACME_EMAIL }}"
+  
+#   # Use envsubst to replace $TRAEFIK_ACME_EMAIL in the file
+#   # and output it to a new file named 'traefik.yml'
+#   envsubst < traefik.yml.template > traefik.yml

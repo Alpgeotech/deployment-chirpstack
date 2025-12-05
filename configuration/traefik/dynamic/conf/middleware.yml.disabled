@@ -1,0 +1,13 @@
+# Add standard security headers (HSTS, X-Frame-Options, etc.)
+http:
+  middlewares:
+    security-headers:
+      headers:
+        # HSTS (Strict-Transport-Security)
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        # Anti-Clickjacking
+        frameDeny: true
+        # Content Type Sniffing
+        contentTypeNosniff: true
