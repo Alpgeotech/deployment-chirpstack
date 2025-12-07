@@ -5,3 +5,4 @@
 - add hardening for traffic in dynamic configuration
     - middleware.yml
     - tls.yml
+- secrets management
