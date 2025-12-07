@@ -31,13 +31,13 @@ services:
     volumes:
       - ./configuration/chirpstack:/etc/chirpstack
     depends_on:
-      - postgres
+      - postgresql
       - mosquitto
       - redis
     environment:
       - MQTT_BROKER_HOST=mosquitto
       - REDIS_HOST=redis
-      - POSTGRESQL_HOST=postgres
+      - POSTGRESQL_HOST=postgresql
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=default"
@@ -93,7 +93,7 @@ services:
     depends_on:
       - chirpstack
 
-  postgres:
+  postgresql:
     image: postgres:14-alpine
     restart: unless-stopped
     volumes:
