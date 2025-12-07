@@ -1,0 +1,92 @@
+name: Deploy Docker Compose Stack to Production
+
+env:
+  SERVICE_DIRECTORY: ~/docker/chirpstack
+
+on:
+  push:
+    branches:
+      - main
+    # Only run if the docker-compose.yml file changes
+    paths:
+      - 'compose.yml.template'
+      - 'configuration'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-slim
+
+    steps:
+      # 1. Check out the repository code
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # 2. Setup SSH Key
+      - name: Set up SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+
+      # 3. Add the host key to known_hosts to avoid interactive prompt
+      - name: Add host key to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRODUCTION_HOST_KEY }}" >> ~/.ssh/known_hosts
+
+      # 4. Create service directory
+      - name: Create service directory
+        run: |
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
+
+      # 5. Populate the .env file with all necessary variables
+      - name: Create *.env files
+        run: |
+          # Overwrite the file here
+          echo "PRODUCTION_HOST_DOMAIN=${{ secrets.PRODUCTION_HOST_DOMAIN }}" > .env
+
+          # Append to the file from here on
+          echo "POSTGRES_USER=${{ secrets.PRODUCTION_POSTGRES_USER }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.PRODUCTION_POSTGRES_PW }}" >> .env
+          echo "POSTGRES_DB=${{ secrets.PRODUCTION_POSTGRES_DB }}" >> .env
+
+      # 6. Fill in variable placeholders in template files
+      - name: Generate config files from template
+        run: |
+          # Install envsubst tool
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+
+          # Export the secret as an environment variable
+          export HOST_DOMAIN="${{ secrets.PRODUCTION_HOST_DOMAIN }}"
+          export TRAEFIK_ACME_EMAIL="${{ secrets.TRAEFIK_ACME_EMAIL }}"
+          export POSTGRES_USER="${{ secrets.PRODUCTION_POSTGRES_USER }}"
+          export POSTGRES_PW="${{ secrets.PRODUCTION_POSTGRES_PW }}"
+          
+          # Use envsubst to replace $TRAEFIK_ACME_EMAIL in the file
+          # and output it to a new file named 'traefik.yml'
+          envsubst '${HOST_DOMAIN}' < compose.yml.template > compose.yml
+          envsubst '${TRAEFIK_ACME_EMAIL}' < configuration/traefik/traefik.yml.template > configuration/traefik/traefik.yml
+          envsubst '${POSTGRES_USER} ${POSTGRES_PW}' < configuration/chirpstack/chirpstack.toml.template > configuration/chirpstack/chirpstack.toml
+
+      # 7. Create the directory structure and configuration files to Server
+      - name: Create file structure on the server
+        run: |
+          scp -r configuration compose.yml .env ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
+
+      # 8. Deploy on Server via SSH
+      - name: Pull images and restart stack
+        run: |
+          # Connect using your new secret names
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
+            # Uncomment this line if your compose file is not in the home directory
+            cd ${{ env.SERVICE_DIRECTORY }}
+            
+            # Pull the latest images specified in the compose file
+            docker compose pull
+            
+            # Stop and recreate the containers in detached mode
+            docker compose up -d --remove-orphans
+          EOF
+ 

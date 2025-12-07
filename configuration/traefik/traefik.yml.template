@@ -33,7 +33,7 @@ entryPoints:
 certificatesResolvers:
   myresolver:
     acme:
-      email: ${LETSENCRYPT_EMAIL}
+      email: ${TRAEFIK_ACME_EMAIL}
       storage: /letsencrypt/acme.json
       httpChallenge:
         entryPoint: web
