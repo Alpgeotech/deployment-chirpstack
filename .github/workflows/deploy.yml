@@ -63,12 +63,14 @@ jobs:
           export TRAEFIK_ACME_EMAIL="${{ secrets.TRAEFIK_ACME_EMAIL }}"
           export POSTGRES_USER="${{ secrets.PRODUCTION_POSTGRES_USER }}"
           export POSTGRES_PW="${{ secrets.PRODUCTION_POSTGRES_PW }}"
+          export CHIRPSTACK_API_SECRET="${{ secrets.PRODUCTION_CHIRPSTACK_API_SECRET }}"
           
           # Use envsubst to replace $TRAEFIK_ACME_EMAIL in the file
           # and output it to a new file named 'traefik.yml'
           envsubst '${HOST_DOMAIN}' < compose.yml.template > compose.yml
           envsubst '${TRAEFIK_ACME_EMAIL}' < configuration/traefik/traefik.yml.template > configuration/traefik/traefik.yml
-          envsubst '${POSTGRES_USER} ${POSTGRES_PW}' < configuration/chirpstack/chirpstack.toml.template > configuration/chirpstack/chirpstack.toml
+          envsubst '${POSTGRES_USER} ${POSTGRES_PW} ${CHIRPSTACK_API_SECRET}' < configuration/chirpstack/chirpstack.toml.template > configuration/chirpstack/chirpstack.toml
+
 
       # 7. Create the directory structure and configuration files to Server
       - name: Create file structure on the server
