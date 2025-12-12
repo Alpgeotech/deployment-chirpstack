@@ -113,6 +113,7 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2.0.22
     restart: unless-stopped
+    user: ${CHIRPSTACK_UID}:${CHIRPSTACK_GID}
     ports:
       - "1883:1883"
     volumes: 
