@@ -105,7 +105,7 @@ services:
     volumes:
       - ./configuration/postgresql/initdb:/docker-entrypoint-initdb.d
       - ./data/postgresql:/var/lib/postgresql/data
-      # initdb needs the user it runs as to exist in /etc/passwd.
+      # initdb needs the user it runs as, to exist in /etc/passwd.
       # https://github.com/docker-library/docs/blob/master/postgres/README.md#arbitrary---user-notes
       - /etc/passwd:/etc/passwd:ro
     env_file: .env
