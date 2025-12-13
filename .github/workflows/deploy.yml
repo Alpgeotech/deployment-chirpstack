@@ -83,7 +83,7 @@ jobs:
       # 7. Create the directory structure and configuration files to Server
       - name: Create file structure on the server
         run: |
-          scp -r configuration compose.yml .env ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
+          scp -r configuration data logs compose.yml .env ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
 
       # 8. Deploy on Server via SSH
       - name: Pull images and restart stack
