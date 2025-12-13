@@ -62,15 +62,16 @@ jobs:
       # 6. Fill in variable placeholders in template files
       - name: Generate config files from templates
         env:
-          TRAEFIK_ACME_EMAIL:       ${{ secrets.TRAEFIK_ACME_EMAIL }}
-          HOST_DOMAIN:              ${{ secrets.PRODUCTION_HOST_DOMAIN }}
-          POSTGRES_USER:            ${{ secrets.PRODUCTION_POSTGRES_USER }}
-          POSTGRES_PW:              ${{ secrets.PRODUCTION_POSTGRES_PW }}
-          POSTGRES_DB:              ${{ secrets.PRODUCTION_POSTGRES_DB }}
-          POSTGRES_DB_HOST:         ${{ secrets.PRODUCTION_POSTGRES_DB_HOST }}
-          CHIRPSTACK_API_SECRET:    ${{ secrets.PRODUCTION_CHIRPSTACK_API_SECRET }}
-          CHIRPSTACK_UID:           ${{ secrets.PRODUCTION_CHIRPSTACK_UID }}
-          CHIRPSTACK_GID:           ${{ secrets.PRODUCTION_CHIRPSTACK_GID }}
+          TRAEFIK_ACME_EMAIL:                 ${{ secrets.TRAEFIK_ACME_EMAIL }}
+          HOST_DOMAIN:                        ${{ secrets.PRODUCTION_HOST_DOMAIN }}
+          POSTGRES_USER:                      ${{ secrets.PRODUCTION_POSTGRES_USER }}
+          POSTGRES_PW:                        ${{ secrets.PRODUCTION_POSTGRES_PW }}
+          POSTGRES_DB:                        ${{ secrets.PRODUCTION_POSTGRES_DB }}
+          POSTGRES_DB_HOST:                   ${{ secrets.PRODUCTION_POSTGRES_DB_HOST }}
+          CHIRPSTACK_API_SECRET:              ${{ secrets.PRODUCTION_CHIRPSTACK_API_SECRET }}
+          CHIRPSTACK_UID:                     ${{ secrets.PRODUCTION_CHIRPSTACK_UID }}
+          CHIRPSTACK_GID:                     ${{ secrets.PRODUCTION_CHIRPSTACK_GID }}
+          MOSQUITTO_INTERNAL_USER_PASSWORD:   ${{ secrets.PRODUCTION_MOSQUITTO_INTERNAL_USER_PASSWORD }}
         run: |
           # Install envsubst tool, because it does not come with ubuntu-slim runner.
           sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext-base
@@ -85,30 +86,31 @@ jobs:
             $CHIRPSTACK_API_SECRET
             $CHIRPSTACK_UID
             $CHIRPSTACK_GID
+            $MOSQUITTO_INTERNAL_USER_PASSWORD
           '
           
           # Use envsubst to replace placeholders in the templates
-          envsubst "$VARS" < compose.yml.template                                 > compose.yml
-          envsubst "$VARS" < configuration/traefik/traefik.yml.template           > configuration/traefik/traefik.yml
-          envsubst "$VARS" < configuration/chirpstack/chirpstack.toml.template    > configuration/chirpstack/chirpstack.toml
+          envsubst "$VARS" < compose.yml.template \
+            > compose.yml
+          envsubst "$VARS" < configuration/traefik/traefik.yml.template \
+            > configuration/traefik/traefik.yml
+          envsubst "$VARS" < configuration/chirpstack/chirpstack.toml.template \
+            > configuration/chirpstack/chirpstack.toml
+          envsubst "$VARS" < configuration/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml.template \
+            > configuration/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml
 
       # 7. Copy configuration files to Server
       - name: Copy config files to the server
         run: |
-          scp -r configuration compose.yml .env ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
+          scp -r configuration compose.yml .env \
+          ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
 
       # 8. Deploy on Server via SSH
       - name: Pull images and restart stack
         run: |
-          # Connect using your new secret names
           ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
-            # Uncomment this line if your compose file is not in the home directory
             cd ${{ env.SERVICE_DIRECTORY }}
-            
-            # Pull the latest images specified in the compose file
             docker compose pull
-            
-            # Stop and recreate the containers in detached mode
             docker compose up -d --remove-orphans
           EOF
  
