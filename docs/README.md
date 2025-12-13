@@ -6,6 +6,22 @@
 
 # TODOs
 - 
+- Mosquitto server muss von außen verfügbar sein
+    - Es gibt Gateways die direkt MQTT Sprechen
+    - Mestia schickt MQTT Daten über eine bridge MQTT to MQTT
+    - Authentifizierung??
+
+- Letsencrypt certificates und SSL where necessary
+
+- use VPN
+
+- force containers to be run as correct user: chirpstack 1001
+
+- Zugang zu info@alpgeotech.de für Github Account
+
+- change first created user by ansible in other git repo ansible-agt1
+
+
 - chmod 600 certificate storage for traefik
 - use `tecnativa/docker-socket-proxy` to limit access to docker socket `/var/run/docker.sock`
 - add hardening for traffic in dynamic configuration
