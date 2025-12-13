@@ -99,18 +99,33 @@ jobs:
           envsubst "$VARS" < configuration/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml.template \
             > configuration/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml
 
-      # 7. Copy configuration files to Server
+      # 7. Copy configuration files to server
       - name: Copy config files to the server
         run: |
           scp -r configuration compose.yml .env \
           ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
 
-      # 8. Deploy on Server via SSH
+      # 8. Lock down permissions on sensitive files
+      - name: Lock down permissions
+        run: |
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
+            cd ${{ env.SERVICE_DIRECTORY }}
+
+            # 1. Directories: User only (Read/Write/Enter) - 700
+            find ./ -type d -exec chmod 700 {} +
+
+            # 2. Files: User only (Read/Write) - 600
+            find ./ -type f -exec chmod 600 {} +
+
+            # 3. Re-enable execution for Shell Scripts - 700
+            find . -name "*.sh" -exec chmod 700 {} +
+          EOF
+
+      # 9. Deploy on Server via SSH
       - name: Pull images and restart stack
         run: |
           ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
             cd ${{ env.SERVICE_DIRECTORY }}
             docker compose pull
-            docker compose up -d --remove-orphans
+            docker compose down && docker compose up -d --remove-orphans
           EOF
- 
