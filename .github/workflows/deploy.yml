@@ -10,7 +10,7 @@ on:
     # Only run if the docker-compose.yml file changes
     paths:
       - 'compose.yml.template'
-      - 'configuration'
+      - 'configuration/**'
   workflow_dispatch:
 
 jobs:
