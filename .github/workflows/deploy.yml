@@ -66,6 +66,7 @@ jobs:
           HOST_DOMAIN:              ${{ secrets.PRODUCTION_HOST_DOMAIN }}
           POSTGRES_USER:            ${{ secrets.PRODUCTION_POSTGRES_USER }}
           POSTGRES_PW:              ${{ secrets.PRODUCTION_POSTGRES_PW }}
+          POSTGRES_DB:              ${{ secrets.PPRODUCTION_POSTGRES_DB }}
           CHIRPSTACK_API_SECRET:    ${{ secrets.PRODUCTION_CHIRPSTACK_API_SECRET }}
           CHIRPSTACK_UID:           ${{ secrets.PRODUCTION_CHIRPSTACK_UID }}
           CHIRPSTACK_GID:           ${{ secrets.PRODUCTION_CHIRPSTACK_GID }}
@@ -74,13 +75,14 @@ jobs:
           sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext-base
 
           VARS='
-            $TRAEFIK_ACME_EMAIL 
-            $HOST_DOMAIN 
-            $POSTGRES_USER 
-            $POSTGRES_PW 
+            $TRAEFIK_ACME_EMAIL
+            $HOST_DOMAIN
+            $POSTGRES_USER
+            $POSTGRES_PW
+            $POSTGRES_DB
             $CHIRPSTACK_API_SECRET
-            $CHIRPSTACK_UID 
-            $CHIRPSTACK_GID 
+            $CHIRPSTACK_UID
+            $CHIRPSTACK_GID
           '
           
           # Use envsubst to replace placeholders in the templates

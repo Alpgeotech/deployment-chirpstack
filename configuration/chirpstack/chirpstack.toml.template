@@ -2,7 +2,7 @@
   level="info"
 
 [postgresql]
-  dsn="postgres://${POSTGRES_USER}:${POSTGRES_PW}@postgresql/chirpstack?sslmode=disable"
+  dsn="postgres://${POSTGRES_USER}:${POSTGRES_PW}@postgresql/${POSTGRES_DB}?sslmode=disable"
   max_open_connections=10
   min_idle_connections=0
 
