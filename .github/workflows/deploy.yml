@@ -67,6 +67,7 @@ jobs:
           POSTGRES_USER:            ${{ secrets.PRODUCTION_POSTGRES_USER }}
           POSTGRES_PW:              ${{ secrets.PRODUCTION_POSTGRES_PW }}
           POSTGRES_DB:              ${{ secrets.PPRODUCTION_POSTGRES_DB }}
+          POSTGRES_DB_HOST:         ${{ secrets.PRODUCTION_POSTGRES_DB_HOST }}
           CHIRPSTACK_API_SECRET:    ${{ secrets.PRODUCTION_CHIRPSTACK_API_SECRET }}
           CHIRPSTACK_UID:           ${{ secrets.PRODUCTION_CHIRPSTACK_UID }}
           CHIRPSTACK_GID:           ${{ secrets.PRODUCTION_CHIRPSTACK_GID }}
@@ -80,6 +81,7 @@ jobs:
             $POSTGRES_USER
             $POSTGRES_PW
             $POSTGRES_DB
+            $POSTGRES_DB_HOST
             $CHIRPSTACK_API_SECRET
             $CHIRPSTACK_UID
             $CHIRPSTACK_GID
