@@ -1,7 +1,11 @@
 # Instructions
 
-# TODOs
+# Document github actions secrets
+- host key
+- user id
 
+# TODOs
+- 
 - chmod 600 certificate storage for traefik
 - use `tecnativa/docker-socket-proxy` to limit access to docker socket `/var/run/docker.sock`
 - add hardening for traffic in dynamic configuration
@@ -36,3 +40,4 @@ chirpstack-1                              | Caused by:
 chirpstack-1                              |     error connecting to server: failed to lookup address information: Try again
 chirpstack-1 exited with code 1 (restarting)
 ```
+

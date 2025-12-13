@@ -1,1 +1,0 @@
-This file exists solely, to make the containing directories trackable by git.

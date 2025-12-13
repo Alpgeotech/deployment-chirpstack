@@ -35,10 +35,18 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.PRODUCTION_HOST_KEY }}" >> ~/.ssh/known_hosts
 
-      # 4. Create service directory
-      - name: Create service directory
+      # 4. Create directory structure
+      - name: Create directory structure
         run: |
+          # Create service directory
           ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
+
+          # Create empty directories for persistent data and logs
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} \
+          "mkdir -p \
+            ${{ env.SERVICE_DIRECTORY }}/data/postgresql \
+            ${{ env.SERVICE_DIRECTORY }}/data/redis \
+            ${{ env.SERVICE_DIRECTORY }}/logs/traefik"
 
       # 5. Populate the .env file with all necessary variables
       - name: Create *.env file
@@ -52,7 +60,7 @@ jobs:
           echo "POSTGRES_DB=${{ secrets.PRODUCTION_POSTGRES_DB }}"              >> .env
 
       # 6. Fill in variable placeholders in template files
-      - name: Generate config files from template
+      - name: Generate config files from templates
         env:
           TRAEFIK_ACME_EMAIL:       ${{ secrets.TRAEFIK_ACME_EMAIL }}
           HOST_DOMAIN:              ${{ secrets.PRODUCTION_HOST_DOMAIN }}
@@ -80,10 +88,10 @@ jobs:
           envsubst "$VARS" < configuration/traefik/traefik.yml.template           > configuration/traefik/traefik.yml
           envsubst "$VARS" < configuration/chirpstack/chirpstack.toml.template    > configuration/chirpstack/chirpstack.toml
 
-      # 7. Create the directory structure and configuration files to Server
-      - name: Create file structure on the server
+      # 7. Copy configuration files to Server
+      - name: Copy config files to the server
         run: |
-          scp -r configuration data logs compose.yml .env ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
+          scp -r configuration compose.yml .env ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
 
       # 8. Deploy on Server via SSH
       - name: Pull images and restart stack
