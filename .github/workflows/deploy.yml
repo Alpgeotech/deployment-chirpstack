@@ -1,7 +1,7 @@
 name: Deploy Docker Compose Stack to Production
 
 env:
-  SERVICE_DIRECTORY: ~/docker/chirpstack
+  SERVICE_DIRECTORY: ~/docker/chirpstack_staging
 
 on:
   push:
