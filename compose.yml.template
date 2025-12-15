@@ -49,6 +49,7 @@ services:
       - "traefik.http.routers.chirpstack.rule=Host(`${HOST_DOMAIN}`)"
       - "traefik.http.routers.chirpstack.entrypoints=websecure"
       - "traefik.http.routers.chirpstack.tls.certresolver=myresolver"
+      - "traefik.http.routers.chirpstack.middlewares=security-headers@file"
 
   chirpstack-gateway-bridge-eu868:
     image: chirpstack/chirpstack-gateway-bridge:4.1.1
