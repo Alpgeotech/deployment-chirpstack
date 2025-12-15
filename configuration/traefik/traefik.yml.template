@@ -12,6 +12,8 @@ api:
 providers:
   docker:
     exposedByDefault: false
+    # use docker-socket-proxy container to not give traefik direct access to the docker socket
+    endpoint: "tcp://docker-socket-proxy:2375"
     network: web
   file:
     directory: /etc/traefik/dynamic/conf

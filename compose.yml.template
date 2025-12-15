@@ -2,14 +2,15 @@
 
 services:
 
-  # docker-socket-proxy:
-  #   restart: always
-  #   image: tecnativa/docker-socket-proxy:v0.4.1
-  #   ports:
-  #     - 127.0.0.1:2375:2375
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   privileged: true
+  docker-socket-proxy:
+    restart: always
+    image: tecnativa/docker-socket-proxy:v0.4.1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CONTAINERS=1
+      - NETWORKS=1
+    privileged: true
 
   traefik:
     image: "traefik:v3.6.2"
@@ -22,7 +23,8 @@ services:
       - ./configuration/traefik/traefik.yml:/etc/traefik/traefik.yml
       - ./configuration/traefik/dynamic:/etc/traefik/dynamic
       - ./configuration/traefik/letsencrypt:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - docker-socket-proxy
 
   chirpstack:
     image: chirpstack/chirpstack:4.15.0
