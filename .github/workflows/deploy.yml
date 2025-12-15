@@ -1,7 +1,7 @@
 name: Deploy Docker Compose Stack to Production
 
 env:
-  SERVICE_DIRECTORY: ~/docker/chirpstack_production
+  SERVICE_DIRECTORY: ~/docker/chirpstack
 
 on:
   push:
@@ -17,6 +17,9 @@ jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-slim
+    # Dynamic Environment Selection
+    # If on main -> production, else -> staging
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
     steps:
       # 1. Check out the repository code
@@ -27,22 +30,22 @@ jobs:
       - name: Set up SSH Key
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.PRODUCTION_DEPLOYMENT_USER_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.DEPLOYMENT_USER_PRIVATE_KEY }}
 
       # 3. Add the host key to known_hosts to avoid interactive prompt
       - name: Add host key to known_hosts
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.PRODUCTION_HOST_KEY }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.HOST_KEY }}" >> ~/.ssh/known_hosts
 
       # 4. Create directory structure
       - name: Create directory structure
         run: |
           # Create service directory
-          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
+          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
 
           # Create empty directories for persistent data and logs
-          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} \
+          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} \
           "mkdir -p \
             ${{ env.SERVICE_DIRECTORY }}/data/postgresql \
             ${{ env.SERVICE_DIRECTORY }}/data/redis \
@@ -52,28 +55,28 @@ jobs:
       - name: Create *.env file
         run: |
           # Overwrite the file here
-          echo "PRODUCTION_HOST_DOMAIN=${{ secrets.PRODUCTION_HOST_DOMAIN }}"   > .env
+          echo "HOST_DOMAIN=${{ secrets.HOST_DOMAIN }}"   > .env
 
           # Append to the file from here on
-          echo "POSTGRES_USER=${{ secrets.PRODUCTION_POSTGRES_USER }}"          >> .env
-          echo "POSTGRES_PASSWORD=${{ secrets.PRODUCTION_POSTGRES_PW }}"        >> .env
-          echo "POSTGRES_DB=${{ secrets.PRODUCTION_POSTGRES_DB }}"              >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"          >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PW }}"        >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"              >> .env
 
       # 6. Fill in variable placeholders in template files
       - name: Generate config files from templates
         env:
           TRAEFIK_ACME_EMAIL:                     ${{ secrets.TRAEFIK_ACME_EMAIL }}
-          HOST_DOMAIN:                            ${{ secrets.PRODUCTION_HOST_DOMAIN }}
-          POSTGRES_USER:                          ${{ secrets.PRODUCTION_POSTGRES_USER }}
-          POSTGRES_PW:                            ${{ secrets.PRODUCTION_POSTGRES_PW }}
-          POSTGRES_DB:                            ${{ secrets.PRODUCTION_POSTGRES_DB }}
-          POSTGRES_DB_HOST:                       ${{ secrets.PRODUCTION_POSTGRES_DB_HOST }}
-          CHIRPSTACK_API_SECRET:                  ${{ secrets.PRODUCTION_CHIRPSTACK_API_SECRET }}
-          CHIRPSTACK_UID:                         ${{ secrets.PRODUCTION_CHIRPSTACK_UID }}
-          CHIRPSTACK_GID:                         ${{ secrets.PRODUCTION_CHIRPSTACK_GID }}
-          MOSQUITTO_INTERNAL_USER_USERNAME:       ${{ secrets.PRODUCTION_MOSQUITTO_INTERNAL_USER_USERNAME }}
-          MOSQUITTO_INTERNAL_USER_PASSWORD:       ${{ secrets.PRODUCTION_MOSQUITTO_INTERNAL_USER_PASSWORD }}
-          MOSQUITTO_INTERNAL_USER_PASSWORD_HASH:  ${{ secrets.PRODUCTION_MOSQUITTO_INTERNAL_USER_PASSWORD_HASH }}
+          HOST_DOMAIN:                            ${{ secrets.HOST_DOMAIN }}
+          POSTGRES_USER:                          ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PW:                            ${{ secrets.POSTGRES_PW }}
+          POSTGRES_DB:                            ${{ secrets.POSTGRES_DB }}
+          POSTGRES_DB_HOST:                       ${{ secrets.POSTGRES_DB_HOST }}
+          CHIRPSTACK_API_SECRET:                  ${{ secrets.CHIRPSTACK_API_SECRET }}
+          CHIRPSTACK_UID:                         ${{ secrets.CHIRPSTACK_UID }}
+          CHIRPSTACK_GID:                         ${{ secrets.CHIRPSTACK_GID }}
+          MOSQUITTO_INTERNAL_USER_USERNAME:       ${{ secrets.MOSQUITTO_INTERNAL_USER_USERNAME }}
+          MOSQUITTO_INTERNAL_USER_PASSWORD:       ${{ secrets.MOSQUITTO_INTERNAL_USER_PASSWORD }}
+          MOSQUITTO_INTERNAL_USER_PASSWORD_HASH:  ${{ secrets.MOSQUITTO_INTERNAL_USER_PASSWORD_HASH }}
         run: |
           # Install envsubst tool, because it does not come with ubuntu-slim runner.
           sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext-base
@@ -109,12 +112,12 @@ jobs:
       - name: Copy config files to the server
         run: |
           scp -r configuration compose.yml .env \
-          ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
+          ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
 
       # 8. Lock down permissions on sensitive files
       - name: Lock down permissions
         run: |
-          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
+          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} << 'EOF'
             cd ${{ env.SERVICE_DIRECTORY }}
 
             # 1. Directories: User only (Read/Write/Enter) - 700
@@ -130,7 +133,7 @@ jobs:
       # 9. Deploy on Server via SSH
       - name: Pull images and restart stack
         run: |
-          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
+          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} << 'EOF'
             cd ${{ env.SERVICE_DIRECTORY }}
             docker compose pull
             docker compose down && docker compose up -d --remove-orphans
