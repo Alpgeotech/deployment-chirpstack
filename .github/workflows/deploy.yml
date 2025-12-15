@@ -27,7 +27,7 @@ jobs:
       - name: Set up SSH Key
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          ssh-private-key: ${{ secrets.PRODUCTION_DEPLOYMENT_USER_PRIVATE_KEY }}
 
       # 3. Add the host key to known_hosts to avoid interactive prompt
       - name: Add host key to known_hosts
@@ -39,10 +39,10 @@ jobs:
       - name: Create directory structure
         run: |
           # Create service directory
-          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
+          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
 
           # Create empty directories for persistent data and logs
-          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} \
+          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} \
           "mkdir -p \
             ${{ env.SERVICE_DIRECTORY }}/data/postgresql \
             ${{ env.SERVICE_DIRECTORY }}/data/redis \
@@ -109,12 +109,12 @@ jobs:
       - name: Copy config files to the server
         run: |
           scp -r configuration compose.yml .env \
-          ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
+          ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
 
       # 8. Lock down permissions on sensitive files
       - name: Lock down permissions
         run: |
-          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
+          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
             cd ${{ env.SERVICE_DIRECTORY }}
 
             # 1. Directories: User only (Read/Write/Enter) - 700
@@ -130,7 +130,7 @@ jobs:
       # 9. Deploy on Server via SSH
       - name: Pull images and restart stack
         run: |
-          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
+          ssh ${{ secrets.PRODUCTION_DEPLOYMENT_USER }}@${{ secrets.PRODUCTION_HOST_IP }} << 'EOF'
             cd ${{ env.SERVICE_DIRECTORY }}
             docker compose pull
             docker compose down && docker compose up -d --remove-orphans
