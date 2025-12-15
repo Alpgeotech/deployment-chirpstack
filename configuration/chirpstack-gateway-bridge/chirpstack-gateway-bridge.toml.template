@@ -3,7 +3,7 @@
 
 [integration.mqtt.auth.generic]
 servers=["tcp://mosquitto:1883"]
-username="internal"
+username="${MOSQUITTO_INTERNAL_USER_USERNAME}"
 password="${MOSQUITTO_INTERNAL_USER_PASSWORD}"
 
 [backend.semtech_udp]
