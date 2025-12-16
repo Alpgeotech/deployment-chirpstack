@@ -6,8 +6,9 @@ env:
 on:
   push:
     branches:
-      - main
-    # Only run if the docker-compose.yml file changes
+      - production
+      # - staging
+    # Only run if the compose.yml file changes
     paths:
       - 'compose.yml.template'
       - 'configuration/**'
@@ -19,7 +20,7 @@ jobs:
     runs-on: ubuntu-slim
     # Dynamic Environment Selection
     # If on main -> production, else -> staging
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    environment: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
 
     steps:
       # 1. Check out the repository code
