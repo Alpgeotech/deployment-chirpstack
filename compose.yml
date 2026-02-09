@@ -1,7 +1,6 @@
 ---
 
 services:
-
   docker-socket-proxy:
     restart: always
     image: tecnativa/docker-socket-proxy:v0.4.1
@@ -37,10 +36,6 @@ services:
       - postgresql
       - mosquitto
       - redis
-    environment:
-      - MQTT_BROKER_HOST=mosquitto
-      - REDIS_HOST=redis
-      - POSTGRESQL_HOST=postgresql
     expose:
       - "8080"
     labels:
@@ -50,58 +45,11 @@ services:
       - "traefik.http.routers.chirpstack.entrypoints=websecure"
       - "traefik.http.routers.chirpstack.tls.certresolver=myresolver"
       - "traefik.http.routers.chirpstack.middlewares=security-headers@file"
-
-  chirpstack-gateway-bridge-eu868:
-    image: chirpstack/chirpstack-gateway-bridge:4.1.1
-    restart: unless-stopped
-    user: ${CHIRPSTACK_UID}:${CHIRPSTACK_GID}
-    ports:
-      - "1700:1700/udp"
-    volumes:
-      - ./configuration/chirpstack-gateway-bridge:/etc/chirpstack-gateway-bridge
     environment:
-      - INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/event/{{ .EventType }}
-      - INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/state/{{ .StateType }}
-      - INTEGRATION__MQTT__COMMAND_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/command/#
-      - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_eu868
-    depends_on:
-      - mosquitto
-
-  chirpstack-gateway-bridge-us915:
-    image: chirpstack/chirpstack-gateway-bridge:4.1.1
-    restart: unless-stopped
-    user: ${CHIRPSTACK_UID}:${CHIRPSTACK_GID}
-    ports:
-      - "1701:1700/udp"
-    volumes:
-      - ./configuration/chirpstack-gateway-bridge:/etc/chirpstack-gateway-bridge
-    environment:
-      - INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/event/{{ .EventType }}
-      - INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/state/{{ .StateType }}
-      - INTEGRATION__MQTT__COMMAND_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/command/#
-      - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_us915
-    depends_on:
-      - mosquitto
-  
-  # chirpstack-gateway-bridge-basicstation:
-  #   image: chirpstack/chirpstack-gateway-bridge:4.1.1
-  #   restart: unless-stopped
-  #   command: -c /etc/chirpstack-gateway-bridge/chirpstack-gateway-bridge-basicstation-eu868.toml
-  #   ports:
-  #     - "3001:3001"
-  #   volumes:
-  #     - ./configuration/chirpstack-gateway-bridge:/etc/chirpstack-gateway-bridge
-  #   depends_on:
-  #     - mosquitto
-
-  # chirpstack-rest-api:
-  #   image: chirpstack/chirpstack-rest-api:4.15.0
-  #   restart: unless-stopped
-  #   command: --server chirpstack:8080 --bind 0.0.0.0:8090 --insecure
-  #   ports:
-  #     - "8090:8090"
-  #   depends_on:
-  #     - chirpstack
+      - MOSQUITTO_HOST=mosquitto
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgresql
+    env_file: .env
 
   postgresql:
     image: postgres:14-alpine

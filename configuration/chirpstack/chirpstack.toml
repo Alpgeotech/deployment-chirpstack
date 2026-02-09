@@ -1,0 +1,35 @@
+[logging]
+  level="warn"
+
+[postgresql]
+  dsn="postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST/$POSTGRES_DB?sslmode=disable"
+  #    postgres://<USERNAME>:<PASSWORD>@<HOSTNAME>/<DATABASE>?sslmode=<SSLMODE>.
+  max_open_connections=10
+  min_idle_connections=0
+
+[redis]
+  servers=[
+    "redis://$REDIS_HOST/",
+  ]
+  tls_enabled=false
+  cluster=false
+
+[network]
+  net_id="000000"
+  enabled_regions=[
+    "eu868",
+    "us915_1",
+  ]
+
+[api]
+  bind="0.0.0.0:8080"
+  secret="$CHIRPSTACK_API_SECRET"
+
+[integration]
+  enabled=["mqtt"]
+  [integration.mqtt]
+    server="tcp://$MOSQUITTO_HOST:1883/"
+    username="$MOSQUITTO_INTERNAL_USERNAME"
+    password="$MOSQUITTO_INTERNAL_PASSWORD"
+    json=true
+    client_id="network_server"

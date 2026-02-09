@@ -10,7 +10,7 @@ on:
       # - staging
     # Only run if the compose.yml file changes
     paths:
-      - 'compose.yml.template'
+      - 'compose.yml'
       - 'configuration/**'
   workflow_dispatch:
 
@@ -53,59 +53,59 @@ jobs:
             ${{ env.SERVICE_DIRECTORY }}/logs/traefik"
 
       # 5. Populate the .env file with all necessary variables
+        # CRITICAL: This explicit mapping is required for three reasons:
+        # 1. FAULT ISOLATION: If a secret contains a breaking character (like ' or "), 
+        #    the runner error will point to the specific line for immediate debugging.
+        # 2. CONFIG MANIFEST: This serves as the 'Single Source of Truth'. If a 
+        #    secret is deleted from GitHub, this step ensures the .env key remains 
+        #    (albeit empty), preventing 'undefined variable' logic bugs in the app.
+        # 3. SECURITY BOUNDARY: Prevents system-level variables (GITHUB_TOKEN, etc.) 
+        #    from being accidentally 'leaked' into the .env file via automated scripts.
       - name: Create *.env file
+        env:
+          HOST_DOMAIN:                    ${{ secrets.HOST_DOMAIN }}                                      
+          CHIRPSTACK_UID:                 ${{ secrets.CHIRPSTACK_UID }}                          
+          CHIRPSTACK_GID":                ${{ secrets.CHIRPSTACK_GID }}                          
+          CHIRPSTACK_API_SECRET:          ${{ secrets.CHIRPSTACK_API_SECRET }}            
+          POSTGRES_USER:                  ${{ secrets.POSTGRES_USER }}                            
+          POSTGRES_PASSWORD:              ${{ secrets.POSTGRES_PASSWORD }}                    
+          POSTGRES_DB:                    ${{ secrets.POSTGRES_DB }}                                
+          MOSQUITTO_INTERNAL_USERNAME:    ${{ secrets.MOSQUITTO_INTERNAL_USERNAME }}
+          MOSQUITTO_INTERNAL_PASSWORD:    ${{ secrets.MOSQUITTO_INTERNAL_PASSWORD }}
         run: |
           # Overwrite the file here
-          echo "HOST_DOMAIN=${{ secrets.HOST_DOMAIN }}"   > .env
+          echo "HOST_DOMAIN=${{ secrets.HOST_DOMAIN }}"                                             > .env
 
           # Append to the file from here on
-          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"          >> .env
-          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PW }}"        >> .env
-          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"              >> .env
+          echo "CHIRPSTACK_UID=${{ secrets.CHIRPSTACK_UID }}"                                       >> .env
+          echo "CHIRPSTACK_GID=${{ secrets.CHIRPSTACK_GID }}"                                       >> .env
+          echo "CHIRPSTACK_API_SECRET=${{ secrets.CHIRPSTACK_API_SECRET }}"                         >> .env
+          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"                                         >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"                                 >> .env
+          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"                                             >> .env
+          echo "MOSQUITTO_INTERNAL_USERNAME=${{ secrets.MOSQUITTO_INTERNAL_USERNAME }}"             >> .env
+          echo "MOSQUITTO_INTERNAL_PASSWORD=${{ secrets.MOSQUITTO_INTERNAL_PASSWORD }}"             >> .env
 
       # 6. Fill in variable placeholders in template files
       - name: Generate config files from templates
         env:
           TRAEFIK_ACME_EMAIL:                     ${{ secrets.TRAEFIK_ACME_EMAIL }}
           HOST_DOMAIN:                            ${{ secrets.HOST_DOMAIN }}
-          POSTGRES_USER:                          ${{ secrets.POSTGRES_USER }}
-          POSTGRES_PW:                            ${{ secrets.POSTGRES_PW }}
-          POSTGRES_DB:                            ${{ secrets.POSTGRES_DB }}
-          POSTGRES_DB_HOST:                       ${{ secrets.POSTGRES_DB_HOST }}
-          CHIRPSTACK_API_SECRET:                  ${{ secrets.CHIRPSTACK_API_SECRET }}
-          CHIRPSTACK_UID:                         ${{ secrets.CHIRPSTACK_UID }}
-          CHIRPSTACK_GID:                         ${{ secrets.CHIRPSTACK_GID }}
-          MOSQUITTO_INTERNAL_USER_USERNAME:       ${{ secrets.MOSQUITTO_INTERNAL_USER_USERNAME }}
-          MOSQUITTO_INTERNAL_USER_PASSWORD:       ${{ secrets.MOSQUITTO_INTERNAL_USER_PASSWORD }}
-          MOSQUITTO_INTERNAL_USER_PASSWORD_HASH:  ${{ secrets.MOSQUITTO_INTERNAL_USER_PASSWORD_HASH }}
+          MOSQUITTO_INTERNAL_USERNAME:            ${{ secrets.MOSQUITTO_INTERNAL_USERNAME }}
+          MOSQUITTO_INTERNAL_PASSWORD_HASH:       ${{ secrets.MOSQUITTO_INTERNAL_PASSWORD_HASH }}
         run: |
           # Install envsubst tool, because it does not come with ubuntu-slim runner.
           sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext-base
 
           VARS='
             $TRAEFIK_ACME_EMAIL
-            $HOST_DOMAIN
-            $POSTGRES_USER
-            $POSTGRES_PW
-            $POSTGRES_DB
-            $POSTGRES_DB_HOST
-            $CHIRPSTACK_API_SECRET
-            $CHIRPSTACK_UID
-            $CHIRPSTACK_GID
-            $MOSQUITTO_INTERNAL_USER_USERNAME
-            $MOSQUITTO_INTERNAL_USER_PASSWORD
-            $MOSQUITTO_INTERNAL_USER_PASSWORD_HASH
+            $MOSQUITTO_INTERNAL_USERNAME
+            $MOSQUITTO_INTERNAL_PASSWORD_HASH
           '
           
           # Use envsubst to replace placeholders in the templates
-          envsubst "$VARS" < compose.yml.template \
-            > compose.yml
           envsubst "$VARS" < configuration/traefik/traefik.yml.template \
             > configuration/traefik/traefik.yml
-          envsubst "$VARS" < configuration/chirpstack/chirpstack.toml.template \
-            > configuration/chirpstack/chirpstack.toml
-          envsubst "$VARS" < configuration/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml.template \
-            > configuration/chirpstack-gateway-bridge/chirpstack-gateway-bridge.toml
           envsubst "$VARS" < configuration/mosquitto/config/password_file.template \
             > configuration/mosquitto/config/password_file
 
