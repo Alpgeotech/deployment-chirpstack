@@ -58,7 +58,7 @@ services:
     ports:
       - "1700:1700/udp"
     environment:
-      - BACKEND__SEMTECH_UDP__UDP_BIND="0.0.0.0:1700"
+      - BACKEND__SEMTECH_UDP__UDP_BIND=0.0.0.0:1700
 
       - INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/event/{{ .EventType }}
       - INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/state/{{ .StateType }}
@@ -78,7 +78,7 @@ services:
     ports:
       - "1701:1700/udp"
     environment:
-      - BACKEND__SEMTECH_UDP__UDP_BIND="0.0.0.0:1700"
+      - BACKEND__SEMTECH_UDP__UDP_BIND=0.0.0.0:1700
 
       - INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/event/{{ .EventType }}
       - INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/state/{{ .StateType }}
