@@ -51,6 +51,46 @@ services:
       - POSTGRES_HOST=postgresql
     env_file: .env
 
+  chirpstack-gateway-bridge-eu868:
+    image: chirpstack/chirpstack-gateway-bridge:4.1.1
+    restart: unless-stopped
+    user: ${CHIRPSTACK_UID}:${CHIRPSTACK_GID}
+    ports:
+      - "1700:1700/udp"
+    environment:
+      - BACKEND__SEMTECH_UDP__UDP_BIND="0.0.0.0:1700"
+
+      - INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/event/{{ .EventType }}
+      - INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/state/{{ .StateType }}
+      - INTEGRATION__MQTT__COMMAND_TOPIC_TEMPLATE=eu868/gateway/{{ .GatewayID }}/command/#
+
+      - INTEGRATION__MQTT__AUTH__GENERIC__SERVERS=tcp://mosquitto:1883
+      - INTEGRATION__MQTT__AUTH__GENERIC__USERNAME=${MOSQUITTO_INTERNAL_USERNAME}
+      - INTEGRATION__MQTT__AUTH__GENERIC__PASSWORD=${MOSQUITTO_INTERNAL_PASSWORD}
+      - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_eu868
+    depends_on:
+      - mosquitto
+
+  chirpstack-gateway-bridge-us915:
+    image: chirpstack/chirpstack-gateway-bridge:4.1.1
+    restart: unless-stopped
+    user: ${CHIRPSTACK_UID}:${CHIRPSTACK_GID}
+    ports:
+      - "1700:1700/udp"
+    environment:
+      - BACKEND__SEMTECH_UDP__UDP_BIND="0.0.0.0:1700"
+
+      - INTEGRATION__MQTT__EVENT_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/event/{{ .EventType }}
+      - INTEGRATION__MQTT__STATE_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/state/{{ .StateType }}
+      - INTEGRATION__MQTT__COMMAND_TOPIC_TEMPLATE=us915/gateway/{{ .GatewayID }}/command/#
+
+      - INTEGRATION__MQTT__AUTH__GENERIC__SERVERS=tcp://mosquitto:1883
+      - INTEGRATION__MQTT__AUTH__GENERIC__USERNAME=${MOSQUITTO_INTERNAL_USERNAME}
+      - INTEGRATION__MQTT__AUTH__GENERIC__PASSWORD=${MOSQUITTO_INTERNAL_PASSWORD}
+      - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_us915
+    depends_on:
+      - mosquitto
+
   postgresql:
     image: postgres:14-alpine
     restart: unless-stopped
