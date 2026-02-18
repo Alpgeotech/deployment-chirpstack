@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
     user: ${CHIRPSTACK_UID}:${CHIRPSTACK_GID}
     ports:
-      - "1700:1700/udp"
+      - "1701:1700/udp"
     environment:
       - BACKEND__SEMTECH_UDP__UDP_BIND="0.0.0.0:1700"
 
