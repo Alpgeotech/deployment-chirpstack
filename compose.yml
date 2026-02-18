@@ -67,7 +67,11 @@ services:
       - INTEGRATION__MQTT__AUTH__GENERIC__SERVERS=tcp://mosquitto:1883
       - INTEGRATION__MQTT__AUTH__GENERIC__USERNAME=${MOSQUITTO_INTERNAL_USERNAME}
       - INTEGRATION__MQTT__AUTH__GENERIC__PASSWORD=${MOSQUITTO_INTERNAL_PASSWORD}
-      - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_eu868
+
+      # If you omit the CLIENT_ID variable entirely, the Bridge will automatically use the actual Gateway ID (c0ba1ffffe00e4df) as its Client ID.
+      # Activating this setting will cause "could not decode client ID to gateway ID" errors. 
+      # I am not yet certain, what exactly to do here.
+      # - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_eu868
     depends_on:
       - mosquitto
 
@@ -87,7 +91,11 @@ services:
       - INTEGRATION__MQTT__AUTH__GENERIC__SERVERS=tcp://mosquitto:1883
       - INTEGRATION__MQTT__AUTH__GENERIC__USERNAME=${MOSQUITTO_INTERNAL_USERNAME}
       - INTEGRATION__MQTT__AUTH__GENERIC__PASSWORD=${MOSQUITTO_INTERNAL_PASSWORD}
-      - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_us915
+      
+      # If you omit the CLIENT_ID variable entirely, the Bridge will automatically use the actual Gateway ID (c0ba1ffffe00e4df) as its Client ID.
+      # Activating this setting will cause "could not decode client ID to gateway ID" errors. 
+      # I am not yet certain, what exactly to do here.
+      # - INTEGRATION__MQTT__AUTH__GENERIC__CLIENT_ID=gateway_bridge_us915
     depends_on:
       - mosquitto
 
