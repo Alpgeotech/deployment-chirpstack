@@ -1,0 +1,63 @@
+---
+- name: Deploy Chirpstack Docker Compose Stack
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ensure target directory structure exists
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0700'
+      loop:
+        - "{{ service_dir }}"
+        - "{{ service_dir }}/data/postgresql"
+        - "{{ service_dir }}/data/redis"
+        - "{{ service_dir }}/logs/traefik"
+
+    - name: Copy configuration directory (excluding templates)
+      ansible.builtin.copy:
+        src: ../configuration/
+        dest: "{{ service_dir }}/configuration/"
+        mode: '0600'
+        directory_mode: '0700'
+
+    - name: Ensure shell scripts are executable
+      ansible.builtin.command: find "{{ service_dir }}" -type f -name "*.sh" -exec chmod 700 {} +
+      changed_when: false
+
+    - name: Copy compose.yml
+      ansible.builtin.copy:
+        src: ../compose.yml
+        dest: "{{ service_dir }}/compose.yml"
+        mode: '0600'
+
+    - name: Generate .env file
+      ansible.builtin.template:
+        src: templates/env.j2
+        dest: "{{ service_dir }}/.env"
+        mode: '0600'
+
+    - name: Generate Traefik config from template
+      ansible.builtin.template:
+        src: ../configuration/traefik/traefik.yml.template
+        dest: "{{ service_dir }}/configuration/traefik/traefik.yml"
+        mode: '0600'
+
+    - name: Generate Mosquitto password file from template
+      ansible.builtin.template:
+        src: ../configuration/mosquitto/config/password_file.template
+        dest: "{{ service_dir }}/configuration/mosquitto/config/password_file"
+        mode: '0600'
+
+    - name: Pull Docker Compose images
+      ansible.builtin.command: docker compose pull
+      args:
+        chdir: "{{ service_dir }}"
+      changed_when: false
+
+    - name: Restart Docker Compose stack
+      ansible.builtin.shell: docker compose down && docker compose up -d --remove-orphans
+      args:
+        chdir: "{{ service_dir }}"
+      # Using shell module because '&&' is a shell operator

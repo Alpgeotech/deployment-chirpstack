@@ -7,135 +7,50 @@ on:
   push:
     branches:
       - production
-      # - staging
-    # Only run if the compose.yml file changes
     paths:
       - 'compose.yml'
       - 'configuration/**'
+      - 'ansible/**'
   workflow_dispatch:
 
 jobs:
   deploy:
     name: Deploy to Production
-    runs-on: ubuntu-slim
-    # Dynamic Environment Selection
-    # If on main -> production, else -> staging
+    runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
 
     steps:
-      # 1. Check out the repository code
       - name: Check out code
         uses: actions/checkout@v4
 
-      # 2. Setup SSH Key
       - name: Set up SSH Key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOYMENT_USER_PRIVATE_KEY }}
 
-      # 3. Add the host key to known_hosts to avoid interactive prompt
       - name: Add host key to known_hosts
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.HOST_KEY }}" >> ~/.ssh/known_hosts
 
-      # 4. Create directory structure
-      - name: Create directory structure
-        run: |
-          # Create service directory
-          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} "mkdir -p  ${{ env.SERVICE_DIRECTORY }}"
-
-          # Create empty directories for persistent data and logs
-          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} \
-          "mkdir -p \
-            ${{ env.SERVICE_DIRECTORY }}/data/postgresql \
-            ${{ env.SERVICE_DIRECTORY }}/data/redis \
-            ${{ env.SERVICE_DIRECTORY }}/logs/traefik"
-
-      # 5. Populate the .env file with all necessary variables
-        # CRITICAL: This explicit mapping is required for three reasons:
-        # 1. FAULT ISOLATION: If a secret contains a breaking character (like ' or "), 
-        #    the runner error will point to the specific line for immediate debugging.
-        # 2. CONFIG MANIFEST: This serves as the 'Single Source of Truth'. If a 
-        #    secret is deleted from GitHub, this step ensures the .env key remains 
-        #    (albeit empty), preventing 'undefined variable' logic bugs in the app.
-        # 3. SECURITY BOUNDARY: Prevents system-level variables (GITHUB_TOKEN, etc.) 
-        #    from being accidentally 'leaked' into the .env file via automated scripts.
-      - name: Create *.env file
+      - name: Run Ansible Playbook
         env:
-          HOST_DOMAIN:                    ${{ secrets.HOST_DOMAIN }}                                      
-          CHIRPSTACK_UID:                 ${{ secrets.CHIRPSTACK_UID }}                          
-          CHIRPSTACK_GID":                ${{ secrets.CHIRPSTACK_GID }}                          
-          CHIRPSTACK_API_SECRET:          ${{ secrets.CHIRPSTACK_API_SECRET }}            
-          POSTGRES_USER:                  ${{ secrets.POSTGRES_USER }}                            
-          POSTGRES_PASSWORD:              ${{ secrets.POSTGRES_PASSWORD }}                    
-          POSTGRES_DB:                    ${{ secrets.POSTGRES_DB }}                                
-          MOSQUITTO_INTERNAL_USERNAME:    ${{ secrets.MOSQUITTO_INTERNAL_USERNAME }}
-          MOSQUITTO_INTERNAL_PASSWORD:    ${{ secrets.MOSQUITTO_INTERNAL_PASSWORD }}
+          # Disables dynamic host key prompting, though known_hosts already covers this
+          ANSIBLE_HOST_KEY_CHECKING: "false"
         run: |
-          # Overwrite the file here
-          echo "HOST_DOMAIN=${{ secrets.HOST_DOMAIN }}"                                             > .env
-
-          # Append to the file from here on
-          echo "CHIRPSTACK_UID=${{ secrets.CHIRPSTACK_UID }}"                                       >> .env
-          echo "CHIRPSTACK_GID=${{ secrets.CHIRPSTACK_GID }}"                                       >> .env
-          echo "CHIRPSTACK_API_SECRET=${{ secrets.CHIRPSTACK_API_SECRET }}"                         >> .env
-          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"                                         >> .env
-          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"                                 >> .env
-          echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"                                             >> .env
-          echo "MOSQUITTO_INTERNAL_USERNAME=${{ secrets.MOSQUITTO_INTERNAL_USERNAME }}"             >> .env
-          echo "MOSQUITTO_INTERNAL_PASSWORD=${{ secrets.MOSQUITTO_INTERNAL_PASSWORD }}"             >> .env
-
-      # 6. Fill in variable placeholders in template files
-      - name: Generate config files from templates
-        env:
-          TRAEFIK_ACME_EMAIL:                     ${{ secrets.TRAEFIK_ACME_EMAIL }}
-          HOST_DOMAIN:                            ${{ secrets.HOST_DOMAIN }}
-          MOSQUITTO_INTERNAL_USERNAME:            ${{ secrets.MOSQUITTO_INTERNAL_USERNAME }}
-          MOSQUITTO_INTERNAL_PASSWORD_HASH:       ${{ secrets.MOSQUITTO_INTERNAL_PASSWORD_HASH }}
-        run: |
-          # Install envsubst tool, because it does not come with ubuntu-slim runner.
-          sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext-base
-
-          VARS='
-            $TRAEFIK_ACME_EMAIL
-            $MOSQUITTO_INTERNAL_USERNAME
-            $MOSQUITTO_INTERNAL_PASSWORD_HASH
-          '
-          
-          # Use envsubst to replace placeholders in the templates
-          envsubst "$VARS" < configuration/traefik/traefik.yml.template \
-            > configuration/traefik/traefik.yml
-          envsubst "$VARS" < configuration/mosquitto/config/password_file.template \
-            > configuration/mosquitto/config/password_file
-
-      # 7. Copy configuration files to server
-      - name: Copy config files to the server
-        run: |
-          scp -r configuration compose.yml .env \
-          ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }}:${{ env.SERVICE_DIRECTORY }}/
-
-      # 8. Lock down permissions on sensitive files
-      - name: Lock down permissions
-        run: |
-          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} << 'EOF'
-            cd ${{ env.SERVICE_DIRECTORY }}
-
-            # 1. Directories: User only (Read/Write/Enter) - 700
-            find ./ -type d -exec chmod 700 {} +
-
-            # 2. Files: User only (Read/Write) - 600
-            find ./ -type f -exec chmod 600 {} +
-
-            # 3. Re-enable execution for Shell Scripts - 700
-            find . -name "*.sh" -exec chmod 700 {} +
-          EOF
-
-      # 9. Deploy on Server via SSH
-      - name: Pull images and restart stack
-        run: |
-          ssh ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.HOST_IP }} << 'EOF'
-            cd ${{ env.SERVICE_DIRECTORY }}
-            docker compose pull
-            docker compose down && docker compose up -d --remove-orphans
-          EOF
+          ansible-playbook ansible/deploy.yml \
+            -i "${{ secrets.HOST_IP }}," \
+            -u "${{ secrets.DEPLOYMENT_USER }}" \
+            -e "service_dir=${{ env.SERVICE_DIRECTORY }}" \
+            -e "host_domain=${{ secrets.HOST_DOMAIN }}" \
+            -e "chirpstack_uid=${{ secrets.CHIRPSTACK_UID }}" \
+            -e "chirpstack_gid=${{ secrets.CHIRPSTACK_GID }}" \
+            -e "chirpstack_api_secret=${{ secrets.CHIRPSTACK_API_SECRET }}" \
+            -e "postgres_user=${{ secrets.POSTGRES_USER }}" \
+            -e "postgres_password=${{ secrets.POSTGRES_PASSWORD }}" \
+            -e "postgres_db=${{ secrets.POSTGRES_DB }}" \
+            -e "mosquitto_username=${{ secrets.MOSQUITTO_INTERNAL_USERNAME }}" \
+            -e "mosquitto_password=${{ secrets.MOSQUITTO_INTERNAL_PASSWORD }}" \
+            -e "mosquitto_password_hash=${{ secrets.MOSQUITTO_INTERNAL_PASSWORD_HASH }}" \
+            -e "traefik_acme_email=${{ secrets.TRAEFIK_ACME_EMAIL }}"
+            
